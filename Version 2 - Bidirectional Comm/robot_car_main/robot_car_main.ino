@@ -66,16 +66,16 @@ void pingDistance(bool filterFlag) {
     filtered_distance = distance;
 
   }
-
-
 }
 
+//function to detect edges
 bool edgeDetect() {
   SENS1_val = digitalRead(SENS1_PIN);
   SENS2_val = digitalRead(SENS2_PIN);
   return (SENS1_val || SENS2_val);
 }
 
+//moves the robot forward
 void forward() {
   analogWrite(pwmAPin, pwnVal);
   digitalWrite(ain1Pin, HIGH);
@@ -85,6 +85,7 @@ void forward() {
   digitalWrite(bin2Pin, HIGH);
 }
 
+//moves the robot back
 void backward() {
   analogWrite(pwmAPin, pwnVal);
   digitalWrite(ain1Pin, LOW);
@@ -94,6 +95,7 @@ void backward() {
   digitalWrite(bin2Pin, LOW);
 }
 
+//turns the robot left
 void left() {
   analogWrite(pwmAPin, 0);
   analogWrite(pwmBPin, pwnVal);
@@ -101,6 +103,7 @@ void left() {
   digitalWrite(bin2Pin, HIGH);
 }
 
+//turns the robot right
 void right() {
   analogWrite(pwmAPin, pwnVal);
   digitalWrite(ain1Pin, HIGH);
@@ -108,10 +111,10 @@ void right() {
   analogWrite(pwmBPin, 0);
 }
 
+//stops moving
 void stopMoving() {
   analogWrite(pwmAPin, 0);
   analogWrite(pwmBPin, 0);
-
 }
 
 
@@ -140,21 +143,27 @@ int peekRight()
   return returnVal;
 }
 
+//function to handle collision
 void handleCollision() {
+//  entering an infinite while loop until safe path is found
   while (true) {
+//    immediately stop moving and start rolling back
     stopMoving();
     while (!myDelay(700)) {
       backward();
     }
+//    check left and right sides
     int leftD = peekLeft();
     int rightD = peekRight();
     Serial.print("Left: ");
     Serial.println(leftD);
     Serial.print("Right: ");
     Serial.println(rightD);
+//    finding which side has a more clearer path
     int betterSide = max(leftD, rightD);
 
-    if (betterSide > collision_threshold) {
+//checking if the better side still has collisions
+    if (betterSide > collision_threshold) {  //if no then turn or else continue
       if (betterSide == leftD) {
         Serial.println("Turning left");
         strcpy(msg2, "3,1");
@@ -163,7 +172,7 @@ void handleCollision() {
         }
         break;
       }
-      else if (betterSide == rightD) {
+      else if (betterSide == rightD) { 
         strcpy(msg2, "3,2");
         Serial.println("Turning right");
         while (!myDelay(700)) {
@@ -266,28 +275,7 @@ void rf24SendData() {
   }
 }
 
-//void rf24SendData() {
-////
-////  // The write() function will block
-////  // until the message is successfully acknowledged by the receiver
-////  // or the timeout/retransmit maxima are reached.
-////  radio.stopListening();
-////  int retval = radio.write(&msg2, sizeof(msg2));
-////
-////  //  Serial.print(F(" ... "));
-////  if (!retval && (currFails <= maxFails)) {
-////    switchFlag = 1;
-////    totalTransmitFailures++;
-////    Serial.print(F("failure, total failures = "));
-////    Serial.println(totalTransmitFailures);
-////    currFails++;
-////  } else {
-////    Serial.println(F("success"));
-////    switchFlag = 0;
-////    currFails = 0;
-////
-////  }
-//}
+//previously used functions to setup receiver and transmitter
 void setupRF24receiver() {
   setupRF24Common();
   // Set us as a receiver
@@ -336,34 +324,27 @@ void setup() {
 
 void loop()
 {
-
-  //  if (switchFlag == 0) {
-  ////    setupRF24receiver();
-  //    rf24RecvData();
-  ////    switchFlag = 1;
-  //  }
-
-
-  //strcmp(moveMsg, "1") == 0
-  if (moveMsg == 1) {
+//  enter state based on the input received from p5
+  if (moveMsg == 1) { //autonomous mode
+//    keep moving forward
     forward();
+//    and ping distance
     pingDistance(true);
     Serial.print("Distance to nearest object: ");
     Serial.println(filtered_distance);
+//    if either collision or an edge is detected
     if (filtered_distance < collision_threshold || edgeDetect()) {
-      Serial.println("Collision ahead");
-      //    while (!myDelay(1000)) {}
-      //    handle collision
+      Serial.println("Collision or edge ahead");
+
       handleCollision();
-
-
     }
     else {
       strcpy(msg2, "1,0");
       while (!myDelay(100)) {}
     }
   }
-  else if (moveMsg == 2) {
+  else if (moveMsg == 2) { //manual mode
+//    direction is decided based on the information relayed from p5
     if (dirMsg == 0) {
       stopMoving();
       strcpy(msg2, "2,0");
@@ -390,12 +371,7 @@ void loop()
     stopMoving();
   }
 
-  //  if (switchFlag == 1) {
-  //    //    setupRF24transmitter();
-  //    rf24SendData();
-  //    //    switchFlag = 0;
-  //  }
-
+//  swtiching between receiver and transmitter
   beAReceiver();
   rf24RecvData();
    while (!myDelay(10)) {}
