@@ -244,6 +244,7 @@ void loop() {
 
     }
   }
+  //  switching between transmitter and receiver
   beATransmitter();
   rf24SendData();
   delay(10);
